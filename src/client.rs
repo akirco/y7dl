@@ -52,6 +52,15 @@ impl Client {
         Self::with_http_client(reqwest::Client::new())
     }
 
+    /// Creates a client with an HTTP proxy.
+    pub fn with_proxy(proxy_url: &str) -> Self {
+        let http = reqwest::Client::builder()
+            .proxy(reqwest::Proxy::all(proxy_url).expect("invalid proxy url"))
+            .build()
+            .expect("failed to build http client");
+        Self::with_http_client(http)
+    }
+
     /// Uses a caller-provided `reqwest::Client` (proxies, timeouts, ...).
     pub fn with_http_client(http: reqwest::Client) -> Self {
         Client {
