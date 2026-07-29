@@ -13,7 +13,11 @@ use std::process::ExitCode;
 use y7dl::{Client, Format, Video};
 
 enum Command {
-    Search { query: String, limit: usize, json: bool },
+    Search {
+        query: String,
+        limit: usize,
+        json: bool,
+    },
     Video(VideoArgs),
 }
 
@@ -166,6 +170,7 @@ async fn run_video(args: VideoArgs) -> y7dl::Result<bool> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let Some(cmd) = parse_args() else {
         print_usage();
         return ExitCode::FAILURE;
