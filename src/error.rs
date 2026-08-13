@@ -11,7 +11,11 @@ pub enum Error {
     /// Network or HTTP-level failure.
     Http(reqwest::Error),
     /// The API returned a non-success HTTP status.
-    UnexpectedStatus(u16),
+    UnexpectedStatus {
+        status: u16,
+        /// Optional body preview to help diagnose the failure.
+        body: Option<String>,
+    },
     /// The API response could not be deserialized.
     Json(serde_json::Error),
     /// Local I/O failure while writing a downloaded stream.
@@ -24,6 +28,8 @@ pub enum Error {
     },
     /// No format matched the requested itag/quality filter.
     FormatNotFound,
+    /// The search/embed HTML could not be parsed for its initial data.
+    PageParse(String),
     /// A stream URL could not be deciphered from `signatureCipher`.
     Cipher(String),
     /// A required field was missing from the API response.
@@ -37,7 +43,10 @@ impl fmt::Display for Error {
                 write!(f, "could not extract a video ID from {input:?}")
             }
             Error::Http(e) => write!(f, "http request failed: {e}"),
-            Error::UnexpectedStatus(code) => write!(f, "unexpected http status {code}"),
+            Error::UnexpectedStatus { status, body } => match body {
+                Some(body) => write!(f, "unexpected http status {status}: {body}"),
+                None => write!(f, "unexpected http status {status}"),
+            },
             Error::Json(e) => write!(f, "failed to parse api response: {e}"),
             Error::Io(e) => write!(f, "i/o error: {e}"),
             Error::VideoUnavailable { status, reason } => match reason {
@@ -45,6 +54,7 @@ impl fmt::Display for Error {
                 None => write!(f, "video unavailable ({status})"),
             },
             Error::FormatNotFound => write!(f, "no format matched the requested filter"),
+            Error::PageParse(msg) => write!(f, "failed to parse page for initial data: {msg}"),
             Error::Cipher(msg) => write!(f, "failed to decipher stream url: {msg}"),
             Error::MissingField(field) => {
                 write!(f, "api response is missing required field `{field}`")

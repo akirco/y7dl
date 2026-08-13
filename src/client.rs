@@ -145,11 +145,15 @@ impl Client {
         let response = request.json(&body).send().await?;
 
         let status = response.status();
+        let text = response.text().await?;
         if !status.is_success() {
-            return Err(Error::UnexpectedStatus(status.as_u16()));
+            let preview = text.chars().take(300).collect::<String>();
+            return Err(Error::UnexpectedStatus {
+                status: status.as_u16(),
+                body: (!preview.is_empty()).then_some(preview),
+            });
         }
 
-        let text = response.text().await?;
         let parsed: PlayerResponse = serde_json::from_str(&text)?;
 
         // Remember the session token YouTube handed out for later requests.
@@ -222,7 +226,11 @@ impl Client {
         let response = self.http.get(url).send().await?;
         let status = response.status();
         if !status.is_success() {
-            return Err(Error::UnexpectedStatus(status.as_u16()));
+            let body = response.text().await.ok();
+            return Err(Error::UnexpectedStatus {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(response.text().await?)
     }
@@ -283,7 +291,10 @@ impl Client {
         let mut response = request.send().await?;
         let status = response.status();
         if !status.is_success() {
-            return Err(Error::UnexpectedStatus(status.as_u16()));
+            return Err(Error::UnexpectedStatus {
+                status: status.as_u16(),
+                body: None,
+            });
         }
 
         let mut written = 0u64;

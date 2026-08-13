@@ -6,8 +6,6 @@ use serde_json::Value;
 use crate::error::Result;
 
 const SEARCH_ENDPOINT: &str = "https://www.youtube.com/results";
-/// Videos-only filter (`sp=EgIQAQ%3D%3D`).
-const FILTER_VIDEOS: &str = "EgIQAQ%3D%3D";
 /// Upload date: last hour.
 pub const FILTER_LAST_HOUR: &str = "EgIIAQ%3D%3D";
 /// Upload date: today.
@@ -164,21 +162,26 @@ pub async fn search(
     if let Some(sp) = filter {
         req = req.query(&[("sp", sp)]);
     } else {
-        req = req.query(&[("sp", FILTER_VIDEOS)]);
+        req = req.query(&[("sp", FILTER_TYPE_VIDEO)]);
     }
 
     let resp = req.send().await?;
     let status = resp.status();
-    if !status.is_success() {
-        return Err(crate::error::Error::UnexpectedStatus(status.as_u16()));
-    }
     let html = resp.text().await?;
+    if !status.is_success() {
+        let preview = html.chars().take(300).collect::<String>();
+        return Err(crate::error::Error::UnexpectedStatus {
+            status: status.as_u16(),
+            body: (!preview.is_empty()).then_some(preview),
+        });
+    }
 
-    let json_str =
-        extract_initial_data(&html).ok_or_else(|| crate::error::Error::Cipher(
+    let json_str = extract_initial_data(&html).ok_or_else(|| {
+        crate::error::Error::PageParse(
             "failed to extract ytInitialData from search page (YouTube structure may have changed)"
                 .into(),
-        ))?;
+        )
+    })?;
 
     let data: Value = serde_json::from_str(json_str)?;
     let mut results = Vec::new();
