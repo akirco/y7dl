@@ -152,13 +152,9 @@ pub async fn search(
     limit: usize,
     filter: Option<&str>,
 ) -> Result<Vec<SearchResult>> {
-    let mut req = http
-        .get(SEARCH_ENDPOINT)
-        .query(&[
-            ("search_query", query),
-            ("hl", "en"),
-            ("gl", "US"),
-        ]);
+    let mut req =
+        http.get(SEARCH_ENDPOINT)
+            .query(&[("search_query", query), ("hl", "en"), ("gl", "US")]);
     if let Some(sp) = filter {
         req = req.query(&[("sp", sp)]);
     } else {
@@ -283,9 +279,7 @@ mod tests {
     #[ignore = "hits the live YouTube site"]
     async fn live_search_returns_results() {
         let client = reqwest::Client::new();
-        let results = search(&client, "rust programming", 5, None)
-            .await
-            .unwrap();
+        let results = search(&client, "rust programming", 5, None).await.unwrap();
         assert!(!results.is_empty());
         for r in &results {
             assert!(!r.video_id.is_empty());
